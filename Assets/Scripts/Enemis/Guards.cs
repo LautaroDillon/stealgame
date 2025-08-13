@@ -6,6 +6,9 @@ using UnityEngine;
 
 public class Guards : MonoBehaviour
 {
+    public Rigidbody rb;
+
+    public int zoneId;
     [Header("Fov")]
     public float radius;
     [Range(0, 360)]
@@ -25,11 +28,57 @@ public class Guards : MonoBehaviour
     public Vector3 EyeLocation => transform.position;
     public Vector3 EyeDirection => transform.forward;
 
+    [Header("Fsm")]
+    StateMachine fsm;
+
+    [Header("Pathfinding")]
+    public NodePathfinding initialNode;
+    public NodePathfinding goalNode;
+    public List<NodePathfinding> path;
+    public int pathIndex;
+    public float nodeReachDistance = 0.3f;
+
+    public float maxSpeed;
+    public float arriveRadius;
+    public float maxForce;
+    [HideInInspector] public Vector3 velocity;
+
+    [Header("Bools")]
+    public bool isPatrolling, isIdle;
+
     private void Start()
     {
         StartCoroutine(FOVRoutine());
+
+        fsm = new StateMachine();
+
+        var stPatrol = new St_Patrol(this, fsm);
+        var stChase = new St_Chase(this, fsm);
+        var St_Idle = new St_Idle(this, fsm);
+        var St_Serach = new St_Serach(this, fsm);
+
+        //defino las distintas tranciciones de la fsm
+        at(St_Idle, stPatrol, () => isPatrolling && !canSeePlayer);
+        at(St_Idle, stChase, () => canSeePlayer);
+
+        //cambion en el estado patrol
+        at(stPatrol, stChase, () => canSeePlayer);
+        at(stPatrol, St_Idle, () => !isPatrolling && !canSeePlayer);
+
+        //cambios en el estado chase
+        at(stChase, stPatrol, () => !canSeePlayer);
+        at(stChase, St_Idle, () => !canSeePlayer && !isPatrolling);
+
+        fsm.SetState(St_Idle);
     }
 
+    void at(IState from, IState to, Func<bool> condition) => fsm.AddTransition(from, to, condition);
+    void any(IState to, Func<bool> condition) => fsm.AddAnyTransition(to, condition);
+
+    private void Update()
+    {
+        fsm.Tick();
+    }
 
     IEnumerator FOVRoutine()
     {
@@ -57,7 +106,7 @@ public class Guards : MonoBehaviour
 
                 if (!Physics.Raycast(transform.position, directiontoTarget, distanceToTarget, obstacleMask))
                     canSeePlayer = true;
-                else 
+                else
                     canSeePlayer = false;
             }
             else
@@ -68,6 +117,28 @@ public class Guards : MonoBehaviour
             canSeePlayer = false;
         }
     }
+
+    #region Movement
+    public Vector3 Seek(Vector3 targetSeek)
+    {
+        var desired = targetSeek - transform.position;
+        desired.Normalize();
+        desired *= maxSpeed;
+        return CalculateSteering(desired);
+    }
+    public Vector3 CalculateSteering(Vector3 desired)
+    {
+        var steering = desired - velocity;
+        steering = Vector3.ClampMagnitude(steering, maxForce);
+        return steering;
+    }
+
+    public void AddForce(Vector3 dir)
+    {
+        velocity += dir;
+        velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
+    }
+    #endregion
 
 
     public void ReportCanHear(Vector3 Location, EHearingSensosType category, float intensity)
@@ -91,6 +162,8 @@ public class Guards : MonoBehaviour
         Handles.DrawLine(transform.position, transform.position + viewAngleA * radius);
         Handles.DrawLine(transform.position, transform.position + viewAngleB * radius);
 
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, hearingRadius);
     }
 
     private Vector3 directionFromAngle(float eulerY, float angleInDegrees)

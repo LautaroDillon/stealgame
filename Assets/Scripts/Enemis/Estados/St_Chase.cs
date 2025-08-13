@@ -2,17 +2,30 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class St_Chase : MonoBehaviour
+public class St_Chase : IState
 {
-    // Start is called before the first frame update
-    void Start()
+    Guards guard;
+    StateMachine _FSM;
+
+    public St_Chase(Guards guard, StateMachine fsm)
     {
-        
+        this.guard = guard;
+        _FSM = fsm;
     }
 
-    // Update is called once per frame
-    void Update()
+    public void OnEnter()
     {
-        
+       Debug.Log("Entering Chase State");
     }
+
+    public void OnExit()
+    {
+       
+    }
+
+    public void Tick()
+    {
+       
+    }
+
 }

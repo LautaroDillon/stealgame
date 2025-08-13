@@ -6,6 +6,7 @@ using UnityEngine;
 
 public enum TypeProyectils
 {
+    none,
     chair,
     knife,
     book,

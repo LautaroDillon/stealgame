@@ -2,16 +2,28 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class St_Serach : MonoBehaviour
+public class St_Serach : IState
 {
-    // Start is called before the first frame update
-    void Start()
+    Guards guard;
+    StateMachine _FSM;
+
+    public St_Serach(Guards guard, StateMachine fsm)
+    {
+        this.guard = guard;
+        _FSM = fsm;
+    }
+
+    public void OnEnter()
+    {
+        Debug.Log("Entering Search State");
+    }
+
+    public void OnExit()
     {
         
     }
 
-    // Update is called once per frame
-    void Update()
+    public void Tick()
     {
         
     }
